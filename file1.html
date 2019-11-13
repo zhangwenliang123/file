@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Document</title>
+	<script src="./jquery.js"></script>
+</head>
+<body>
+	<div id="per_box" style="width: 350px; height: 15px; background-color: #777777">
+		<div id="per" style="width: 0%; height: 100%; background-color: #007CD5"></div>
+		<span id="per_num"></span>
+	 </div>
+	<br />
+	<input type="file" name="file_tag" id="file_tag">
+	<input type="button" value="上传" id="upload_btn">
+</body>
+</html>
+<script>
+	$("#upload_btn").click(function(){
+		var file= $("#file_tag")[0].files[0];
+		if(!file){
+			$("#file_tag").trigger("click");
+		}
+
+		var chunk;
+		upload(file);
+
+		function upload(files){
+			var every_size = 1024;//每页的数据
+			var name = files.name+"_chunk";
+			var chunk = window.localStorage.getItem(name) || 1;
+			var chunks = Math.ceil(files.size /every_size);
+
+
+			var offset = (chunk-1) * every_size;
+			var limit = offset > files.size ? files.size : chunk * every_size;
+
+			var data = files.slice(offset,limit);
+			var per = (limit/file.size * 100).toFixed(2);
+			
+			var form = new FormData();
+			form.append("data",data);
+			form.append("filename",files.name);
+			form.append("filesize",files.size);
+
+			$.ajax({
+				type: "post",
+				dataType: "json",
+				data: form,
+				url: "/first/file/file.php",
+				processData: false,
+				contentType: false,
+				cache:false,
+				success:function(res) {
+					if(res.error == 0 ){
+					if(chunk >= chunks){
+							$('#per').css({width : '100%'});
+							per = per + "%";
+							$("#per_num").text(per);
+							var img="<img src='"+res.data.path+"'>";
+							$("#show_img").append(img);
+							// var video="<video src='"+res.data.path+"' controls='controls'></video>";
+							// $("#show_img").append(video);
+					}else{
+						chunk = chunk+1;
+						per = per + "%";
+						$("#per").css({width:per});
+						$("#per_num").text(per);
+						window.localStorage.setItem(name,chunk);
+						upload(files);
+					}
+					}
+				}
+
+			});
+		}
+	});
+</script>

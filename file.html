@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+</head>
+<body>
+    <tabale>
+        <div id="per_box" style="width: 350px; height: 15px; background-color: #cccccc">
+            <div id="per" style="width: 0%; height: 100%; background-color: #007CD5"></div>
+            <span id="per_num"></span>
+        </div>
+        <br>
+        <input type="file" name="file" id="file">
+        <input type="button" id="demo" value="上传">
+    </tabale>
+<div id="show_img"></div>
+</body>
+</html>
+<script src="./jquery.js"></script>
+<script>
+    $(function(){
+        $('#demo').click(function(){
+           var file = $('#file')[0].files[0];
+           if (!file){
+               $('#file').trigger("click");
+           }
+           var chunk;
+           upload(file);
+           function upload(file){
+               var upload_speed = 1024 *1024*1024*50; // 字节
+               var chunks = Math.ceil(file.size/upload_speed); // 上传文件的总页码
+               var filename = file.name+"_chunk";
+               var chunk = window.localStorage.getItem(filename) || 1;
+                   chunk = chunk >= chunks ? chunks : parseInt(chunk);
+               var offset = (chunk-1) * upload_speed;
+               var limit = offset > file.size ? file.size : chunk*upload_speed;
+               var per = (limit/file.size * 100).toFixed(2);
+               var data = file.slice(offset,limit); // 每一页的数据
+               var form = new FormData();
+               form.append("data",data);
+               form.append("filename",file.name);
+               form.append("filesize",file.size);
+               var url = "./file.php";
+               $.ajax({
+                   type : "post",
+                   data : form,
+                   dataType : "json",
+                   url : url,
+                   processData : false,
+                   contentType : false,
+                   cache : false,
+                   success:function(res){
+                       if (res.error == 0) {
+                           // 如果当前页大于等于总页数
+                           if (chunk >= chunks) {
+                               per = 100+"%";
+                               $('#per').css({width:per});
+                               $('#per_num').text(per);
+                               var img="<img src='"+res.data.path+"'>";
+                               $('#show_img').append(img);
+                               // var video="<video src='"+res.data.path+"' controls='controls'></video>";
+                               // $('#show_img').append(video);
+                           }else{
+                               chunk = chunk+1;
+                               per = per+"%";
+                               $('#per').css({width:per});
+                               $('#per_num').text(per);
+                               window.localStorage.setItem(filename,chunk);
+                               upload(file);
+                           }
+                       }
+                   }
+               });
+           }
+        });
+    });
+</script>
